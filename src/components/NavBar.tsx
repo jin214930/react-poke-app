@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
+import { User, getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 import app from '../firebase';
+import storage from '../utils/storage';
 
-const initialUserData = localStorage.getItem('userData') ? JSON.parse(localStorage.getItem('userData')) : {};
+const initialUserData = storage.get<User>('userData');
 
 const NavBar = () => {
   const [show, setShow] = useState(false);
-  const [userData, setUserData] = useState(initialUserData);
+  const [userData, setUserData] = useState<User | null>(initialUserData);
 
   const {pathname} = useLocation();
 
@@ -26,7 +27,7 @@ const NavBar = () => {
   const handleAuth = () => {
     signInWithPopup(auth, provider)
     .then(result => {
-      localStorage.setItem('userData', JSON.stringify(result.user));
+      storage.set('userData', JSON.stringify(result.user));
       setUserData(result.user);
     })
     .catch(error => {
@@ -61,7 +62,8 @@ const NavBar = () => {
 
   const handleLogout = () => {
     signOut(auth).then(() => {
-      setUserData({});
+      storage.remove('userData');
+      setUserData(null);
     })
     .catch(error => {
       alert(error.message);
@@ -83,7 +85,7 @@ const NavBar = () => {
           <Login onClick={handleAuth}>로그인</Login>
         ) : 
         <SignOut>
-          <UserImg src={userData.photoURL} alt='user photo'/>
+          {userData?.photoURL && <UserImg src={userData.photoURL} alt='user photo'/>}
           <Dropdown>
             <span onClick={handleLogout}>Sign Out</span>
           </Dropdown>
@@ -101,7 +103,7 @@ const UserImg = styled.img`
   height: 100%;
 `;
 
-const NavWrapper = styled.nav`
+const NavWrapper = styled.nav<{show: boolean}>`
   position: fixed;
   top: 0;
   left: 0;
